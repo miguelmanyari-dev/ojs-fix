@@ -1,0 +1,31 @@
+[Unit]
+Description=Scan-only attachment antivirus socket for one OJS account
+After=clamd.service
+
+[Service]
+Type=simple
+# EXAMPLE: use the existing clamd daemon user and the dedicated OJS group.
+User=amavis
+Group=journal
+ExecStart=/usr/bin/python3 /usr/local/libexec/ojs-fix-scan-proxy --listen /run/ojs-fix-journal/scan.sock --upstream /run/clamd.amavisd/clamd.sock --allowed-uid 1001 --max-bytes 20971520 --workers 2 --timeout 15
+RuntimeDirectory=ojs-fix-journal
+RuntimeDirectoryMode=0750
+UMask=0007
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/ojs-fix-journal
+RestrictAddressFamilies=AF_UNIX
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+MemoryMax=96M
+TasksMax=8
+LimitNOFILE=64
+
+[Install]
+WantedBy=multi-user.target

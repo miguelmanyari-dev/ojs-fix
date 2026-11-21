@@ -26,3 +26,4 @@ backups/
 private/
 public_html/
 incident-raw/
+plugins/generic/ojsFixAttachmentGuard/policy.php

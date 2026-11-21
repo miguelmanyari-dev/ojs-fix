@@ -116,3 +116,7 @@ Para instalaciones grandes, un análisis inicial completo puede ser necesario an
 5. Crea y verifica una nueva copia consistente. No sustituyas la anterior hasta verificar la nueva.
 
 Para retirar la herramienta, detén timer/path, entra en mantenimiento y usa `--unlock-code`. Sustituye o retira de forma controlada los includes y las plantillas/metadatos de CWP, valida sintaxis, recarga y comprueba el sitio. Restaurar permisos normales de escritura es una decisión administrativa explícita; no hagas `chmod -R 777`. Conserva los documentos, la base de datos y las evidencias de incidentes según tu política.
+
+## Capa de adjuntos v0.2
+
+Para bloquear adjuntos antes de guardarlos y antes de descargarlos, instala ambas partes de [ATTACHMENTS.md](ATTACHMENTS.md). El timer de integridad sigue siendo necesario. Incluye en el respaldo los certificados privados del canal local si utilizas TLS y verifica su caducidad.

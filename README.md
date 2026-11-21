@@ -6,6 +6,10 @@ Código reutilizable para administradores y desarrolladores: perfil por sitio, c
 
 > English: a configurable Linux integrity and upload guard for OJS, with per-site web policies and a sanitized incident case study. Requires root, a dedicated account, an approved clean baseline and a filesystem supporting immutable flags. Not an official PKP product.
 
+## Nuevo: antivirus antes de aceptar y entregar adjuntos
+
+La edición v0.2 incorpora una [capa de adjuntos](docs/ATTACHMENTS.md): analiza las subidas antes de que OJS las acepte y las descargas privadas antes de entregarlas al revisor. Comprueba contenido real, formatos Office/PDF, nombres engañosos y componentes activos; si el antivirus falla, bloquea la operación. Necesita el prepend FPM y el plugin de descargas, además del guardián periódico.
+
 ## Qué hace
 
 | Capa | Comportamiento |
@@ -18,7 +22,7 @@ Código reutilizable para administradores y desarrolladores: perfil por sitio, c
 | CWP | Repara los includes de vhosts definidos en el perfil; admite copias aprobadas de plantillas y metadatos por cuenta. |
 | Operación | Timer de un minuto, registros locales, comprobaciones HTTP al origen y mantenimiento explícito para actualizar código y base de datos juntos. |
 
-No instala ni actualiza OJS automáticamente. Primero se corrige y revisa la instalación; después se aprueba su código. La protección no cubre un atacante con acceso root, un administrador que aprueba código malicioso, todos los ataques a la base de datos ni archivos todavía pendientes de antivirus. Las actualizaciones oficiales siguen siendo necesarias.
+No instala ni actualiza OJS automáticamente. Primero se corrige y revisa la instalación; después se aprueba su código. La protección no cubre un atacante con acceso root, un administrador que aprueba código malicioso, todos los ataques a la base de datos ni malware desconocido que el antivirus no detecte. Las instalaciones que solo activen el guardián periódico siguen teniendo un intervalo de espera hasta su análisis. Las actualizaciones oficiales siguen siendo necesarias.
 
 ## Empezar
 
@@ -50,7 +54,7 @@ La [prueba opcional del kernel](tests/kernel_smoke.py) requiere root y `CAP_LINU
 sudo python3 tests/kernel_smoke.py --uid 65534 --gid 65534
 ```
 
-Hay **17 pruebas de regresión** y una prueba real de bloqueo/restauración del kernel verificadas en Python 3.6 y pruebas de regresión verificadas también en Python 3.12. La edición específica desplegada en el caso original tiene verificaciones de navegación, PDF, login, cuarentena, antivirus, recuperación de configuración y ejecución automática. La generalización pública usa un perfil configurable y requiere validación en cada servidor. Consulta el [registro de validación](docs/VALIDATION.md).
+La suite completa tiene **39 pruebas aprobadas** con Python 3.6 y PHP 8.3: las 17 regresiones de integridad originales, 17 de adjuntos y 5 del proxy. Las 17 originales se verificaron también en Python 3.12; además se verificó el bloqueo y restauración reales del kernel. Las pruebas de adjuntos requieren PHP y las del proxy requieren sockets Unix de Linux. La edición específica desplegada en el caso original tiene verificaciones de navegación, PDF, login, cuarentena, antivirus, recuperación de configuración y ejecución automática. La generalización pública usa un perfil configurable y requiere validación en cada servidor. Consulta el [registro de validación](docs/VALIDATION.md).
 
 ## Por qué surgió
 

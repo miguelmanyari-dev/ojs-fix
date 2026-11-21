@@ -22,7 +22,7 @@ import tarfile
 import time
 import uuid
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 SITE = DATA = CONFIG = STATE = HOME = None
 DOMAIN = ''
 PROFILE = {}
@@ -603,7 +603,7 @@ def health_checks():
     for probe in PROFILE['health_checks']:
         path, expected = probe['path'], str(probe['status'])
         code, output, error = execute(['/usr/bin/curl', '--silent', '--show-error',
-            '--user-agent', 'OJS-Fix/0.1', '--connect-timeout', '3', '--max-time', '6',
+            '--user-agent', 'OJS-Fix/0.2', '--connect-timeout', '3', '--max-time', '6',
             '--resolve', DOMAIN + ':443:' + origin, '--output', '/dev/null',
             '--write-out', '%{http_code}', 'https://' + DOMAIN + path], timeout=8)
         results.append({'path': path, 'status': output, 'ok': code == 0 and output == expected})

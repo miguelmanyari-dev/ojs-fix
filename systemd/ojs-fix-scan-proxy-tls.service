@@ -1,0 +1,31 @@
+[Unit]
+Description=Scan-only attachment antivirus socket for one OJS account
+After=clamd.service
+
+[Service]
+Type=simple
+# EXAMPLE: use the existing clamd daemon user/group. Mutual TLS authenticates the OJS client.
+User=amavis
+Group=amavis
+ExecStart=/usr/bin/python3 /usr/local/libexec/ojs-fix-scan-proxy --listen-tls 127.0.0.1:3327 --tls-cert /etc/ojs-fix-tls/journal/server.pem --tls-key /etc/ojs-fix-tls/journal/server.key --tls-ca /etc/ojs-fix-tls/journal/ca.pem --upstream /run/clamd.amavisd/clamd.sock --max-bytes 20971520 --workers 2 --timeout 15
+RuntimeDirectory=ojs-fix-journal
+RuntimeDirectoryMode=0750
+UMask=0007
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/ojs-fix-journal
+RestrictAddressFamilies=AF_UNIX AF_INET
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+MemoryMax=96M
+TasksMax=8
+LimitNOFILE=64
+
+[Install]
+WantedBy=multi-user.target
