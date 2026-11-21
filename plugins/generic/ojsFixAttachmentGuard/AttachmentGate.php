@@ -561,6 +561,66 @@ final class AttachmentGate
         error_log('OJS-Fix attachment blocked: ' . $reason);
     }
 
+    public function checkMailMessage(\Symfony\Component\Mime\Email $message): void
+    {
+        // Work on the actual MIME tree, including embedded/inline DataParts.
+        // Freeze inspected bytes before transport; never send a mutable path.
+        $total = 0;
+        $parts = 0;
+        $body = $this->mailPart($message->getBody(), $total, $parts, 0);
+        $message->setBody($body);
+    }
+
+    private function mailPart(\Symfony\Component\Mime\Part\AbstractPart $part, int &$total, int &$parts, int $depth): \Symfony\Component\Mime\Part\AbstractPart
+    {
+        if ($depth > 16 || ++$parts > 100) {
+            throw new AttachmentRejected('mail_structure_limit');
+        }
+        if ($part instanceof \Symfony\Component\Mime\Part\AbstractMultipartPart) {
+            $children = [];
+            foreach ($part->getParts() as $child) {
+                $children[] = $this->mailPart($child, $total, $parts, $depth + 1);
+            }
+            $class = get_class($part);
+            return new $class(...$children);
+        }
+        if (!($part instanceof \Symfony\Component\Mime\Part\DataPart)) {
+            return clone $part;
+        }
+        $headers = $part->getPreparedHeaders();
+        $name = $headers->getHeaderParameter('Content-Disposition', 'filename')
+            ?? $headers->getHeaderParameter('Content-Type', 'name');
+        if (!$name) {
+            throw new AttachmentRejected('mail_attachment_name_required');
+        }
+        $bytes = $part->getBody();
+        $total += strlen($bytes);
+        if ($total > $this->policy['max_bytes']) {
+            throw new AttachmentRejected('mail_attachment_size_limit', 413);
+        }
+        $temporary = tempnam($this->policy['temp_dir'], 'ojs-fix-mail-');
+        if ($temporary === false || dirname($temporary) !== realpath($this->policy['temp_dir'])) {
+            throw new AttachmentRejected('temporary_storage_unavailable', 503);
+        }
+        try {
+            chmod($temporary, 0600);
+            if (file_put_contents($temporary, $bytes) !== strlen($bytes)) {
+                throw new AttachmentRejected('temporary_storage_unavailable', 503);
+            }
+            $checked = $this->checkPath($temporary, $name, true);
+        } finally {
+            if (is_file($temporary)) { unlink($temporary); }
+        }
+        $replacement = new \Symfony\Component\Mime\Part\DataPart($bytes, $name, $checked['mime']);
+        if ($headers->getHeaderBody('Content-Disposition') === 'inline') {
+            $replacement->asInline();
+        }
+        if ($part->hasContentId()) {
+            $replacement->getHeaders()->addIdHeader('Content-ID', $part->getContentId());
+        }
+        return $replacement;
+    }
+
     public static function deny(\Throwable $error): void
     {
         $status = $error instanceof AttachmentRejected ? $error->status : 503;

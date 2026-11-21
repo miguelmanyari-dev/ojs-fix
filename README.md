@@ -8,7 +8,7 @@ Código reutilizable para administradores y desarrolladores: perfil por sitio, c
 
 ## Nuevo: antivirus antes de aceptar y entregar adjuntos
 
-La edición v0.2 incorpora una [capa de adjuntos](docs/ATTACHMENTS.md): analiza las subidas antes de que OJS las acepte y las descargas privadas antes de entregarlas al revisor. Comprueba contenido real, formatos Office/PDF, nombres engañosos y componentes activos; si el antivirus falla, bloquea la operación. Necesita el prepend FPM y el plugin de descargas, además del guardián periódico.
+La edición v0.2 incorpora una [capa de adjuntos](docs/ATTACHMENTS.md): analiza las subidas antes de que OJS las acepte y las descargas privadas antes de entregarlas al revisor y los adjuntos del correo nativo de OJS antes del transporte SMTP. Comprueba contenido real, formatos Office/PDF, nombres engañosos y componentes activos; si el antivirus falla, bloquea la operación. Necesita el prepend FPM y el plugin de descargas, además del guardián periódico.
 
 ## Qué hace
 
@@ -54,7 +54,7 @@ La [prueba opcional del kernel](tests/kernel_smoke.py) requiere root y `CAP_LINU
 sudo python3 tests/kernel_smoke.py --uid 65534 --gid 65534
 ```
 
-La suite completa tiene **39 pruebas aprobadas** con Python 3.6 y PHP 8.3: las 17 regresiones de integridad originales, 17 de adjuntos y 5 del proxy. Las 17 originales se verificaron también en Python 3.12; además se verificó el bloqueo y restauración reales del kernel. Las pruebas de adjuntos requieren PHP y las del proxy requieren sockets Unix de Linux. La edición específica desplegada en el caso original tiene verificaciones de navegación, PDF, login, cuarentena, antivirus, recuperación de configuración y ejecución automática. La generalización pública usa un perfil configurable y requiere validación en cada servidor. Consulta el [registro de validación](docs/VALIDATION.md).
+La suite completa tiene **42 pruebas aprobadas** con Python 3.6 y PHP 8.3: las 17 regresiones de integridad originales, 20 de adjuntos y 5 del proxy. Las 17 originales se verificaron también en Python 3.12; además se verificó el bloqueo y restauración reales del kernel. Las pruebas de adjuntos requieren PHP y las del proxy requieren sockets Unix de Linux. La edición específica desplegada en el caso original tiene verificaciones de navegación, PDF, login, cuarentena, antivirus, recuperación de configuración y ejecución automática. La generalización pública usa un perfil configurable y requiere validación en cada servidor. Consulta el [registro de validación](docs/VALIDATION.md).
 
 ## Por qué surgió
 

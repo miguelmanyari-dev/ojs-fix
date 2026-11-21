@@ -16,9 +16,12 @@ import unittest
 import urllib.error
 import urllib.request
 import zipfile
+import email
+import email.policy
 
 ROOT = Path(__file__).resolve().parents[1]
 PHP = os.environ.get('PHP_BINARY') or shutil.which('php')
+OJS_AUTOLOAD = os.environ.get('OJS_VENDOR_AUTOLOAD')
 PDF = b'%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n'
 TYPES = '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'
 DOCUMENT = '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Harmless manuscript</w:t></w:r></w:p></w:body></w:document>'
@@ -312,6 +315,57 @@ echo 'UNEXPECTED_FALLTHROUGH'; }''')
         finally:
             process.terminate()
             process.wait(timeout=3)
+
+    def inspect_mail(self, data, name='paper.pdf', inline=False):
+        path = self.private / 'mail-fixture'
+        path.write_bytes(data)
+        driver = self.root / 'mail.php'
+        driver.write_text('''<?php
+require getenv('OJS_VENDOR_AUTOLOAD');
+require $argv[1] . '/AttachmentGate.php';
+$input=json_decode(stream_get_contents(STDIN),true);
+$message=(new \\Symfony\\Component\\Mime\\Email())->from('fixture@example.invalid')->to('reviewer@example.invalid')->text('Harmless body')->attachFromPath($input['path'],$input['name']);
+if($input['inline']) {
+ $image=new \\Symfony\\Component\\Mime\\Part\\DataPart(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII='),'pixel.png','image/png');
+ $image->asInline();$cid=$image->getContentId();$message->html('<img src="cid:'.$cid.'">')->attachPart($image);
+}
+try {
+ $gate=new \\OjsFix\\AttachmentGate($argv[1].'/policy.php');$gate->checkMailMessage($message);
+ file_put_contents($input['path'],'changed after inspection');
+ echo json_encode(['accepted'=>true,'mime'=>base64_encode($message->toString())]);
+} catch(\\OjsFix\\AttachmentRejected $error){echo json_encode(['accepted'=>false,'reason'=>$error->reason,'status'=>$error->status]);}
+''')
+        result = subprocess.run([PHP, str(driver), str(self.plugin)],
+            input=json.dumps({'path': str(path), 'name': name, 'inline': inline}),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=5)
+        self.assertEqual(0, result.returncode, result.stderr)
+        return json.loads(result.stdout)
+
+    @unittest.skipUnless(OJS_AUTOLOAD, 'Set OJS_VENDOR_AUTOLOAD to the OJS Composer autoloader for MIME integration tests')
+    def test_mail_attachments_are_scanned_and_frozen_without_sending(self):
+        result = self.inspect_mail(PDF)
+        self.assertTrue(result['accepted'])
+        message = email.message_from_bytes(base64.b64decode(result['mime']), policy=email.policy.default)
+        attachments = list(message.iter_attachments())
+        self.assertEqual(1, len(attachments))
+        self.assertEqual(PDF, attachments[0].get_payload(decode=True))
+
+    @unittest.skipUnless(OJS_AUTOLOAD, 'Set OJS_VENDOR_AUTOLOAD for MIME integration tests')
+    def test_mail_rejects_antivirus_detection_and_scanner_failure(self):
+        result = self.inspect_mail(b'EICAR-STANDARD-ANTIVIRUS-TEST-FILE', 'paper.docx')
+        self.assertEqual('antivirus_detected', result['reason'])
+        self.mode = 'error'
+        self.assertEqual(503, self.inspect_mail(PDF)['status'])
+
+    @unittest.skipUnless(OJS_AUTOLOAD, 'Set OJS_VENDOR_AUTOLOAD for MIME integration tests')
+    def test_mail_keeps_text_and_valid_inline_images(self):
+        result = self.inspect_mail(PDF, inline=True)
+        self.assertTrue(result['accepted'])
+        message = email.message_from_bytes(base64.b64decode(result['mime']), policy=email.policy.default)
+        self.assertTrue(any(part.get_content_type() == 'text/plain' for part in message.walk()))
+        images = [part for part in message.walk() if part.get_content_type() == 'image/png']
+        self.assertEqual(1, len(images))
+        self.assertTrue(images[0].get('Content-ID'))
 
     def test_real_php_upload_prepend_blocks_before_application(self):
         webroot = self.root / 'web'

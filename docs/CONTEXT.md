@@ -44,3 +44,5 @@ El repositorio es una generalización de los controles de ese despliegue. No dis
 El operador recordó un incidente previo con adjuntos que aparentaban ser documentos. Esa observación motivó revisar una limitación del primer mecanismo: escanear cada minuto dejaba un intervalo antes de detectar un archivo ya guardado. La ampliación v0.2 añade análisis antes de aceptar la subida y antes de entregar descargas privadas, con verificación del contenido real y rechazo ante errores del antivirus.
 
 La auditoría posterior de 402 adjuntos no encontró firmas conocidas de virus. Identificó 7 documentos Word con objetos externos y 2 archivos con extensión incompatible con su contenido. Se preservaron los originales y se aplica la política de bloqueo; no se atribuyen retrospectivamente esos archivos al ataque original. El mecanismo, las pruebas y las limitaciones se describen en [ATTACHMENTS.md](ATTACHMENTS.md).
+
+También se cerró el camino del correo nativo con adjuntos ya guardados: se inspeccionan las partes MIME antes de SMTP, conservando únicamente los bytes comprobados. Las pruebas de integración no enviaron mensajes.

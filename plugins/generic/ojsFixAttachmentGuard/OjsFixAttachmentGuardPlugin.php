@@ -17,6 +17,8 @@ class OjsFixAttachmentGuardPlugin extends GenericPlugin
         if ($success && $this->getEnabled()) {
             Hook::add('File::download', [$this, 'download']);
             Hook::add('FileManager::downloadFile', [$this, 'downloadByPath']);
+            \Illuminate\Support\Facades\Event::listen(\Illuminate\Mail\Events\MessageSending::class,
+                [$this, 'checkOutgoingAttachments']);
         }
         return $success;
     }
@@ -25,7 +27,7 @@ class OjsFixAttachmentGuardPlugin extends GenericPlugin
     public function getDisplayName(): string { return 'OJS-Fix: protección de archivos adjuntos'; }
     public function getDescription(): string
     {
-        return 'Verifica los adjuntos con antivirus y una política de contenido antes de descargarlos. Configuración protegida por el administrador del servidor.';
+        return 'Verifica los adjuntos antes de descargarlos o enviarlos por correo. Configuración protegida por el administrador del servidor.';
     }
 
     public function download(string $hook, array $args): bool
@@ -70,5 +72,12 @@ class OjsFixAttachmentGuardPlugin extends GenericPlugin
             AttachmentGate::deny($error);
         }
         exit;
+    }
+
+    public function checkOutgoingAttachments(\Illuminate\Mail\Events\MessageSending $event): void
+    {
+        // Throwing on rejection prevents SMTP transport; this method never sends mail.
+        $gate = new AttachmentGate(__DIR__ . '/policy.php');
+        $gate->checkMailMessage($event->message);
     }
 }

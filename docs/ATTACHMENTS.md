@@ -4,12 +4,13 @@
 
 Un archivo puede llamarse `manuscrito.docx` o anunciar un MIME de Word y contener un ejecutable, un documento con macros, un objeto externo o malware conocido. Revisar solo la extensión no verifica su contenido. Además, el análisis periódico deja un intervalo entre guardar un archivo y detectarlo: un revisor podría descargarlo durante ese intervalo.
 
-La capa de adjuntos de OJS-Fix añade dos controles sin modificar el núcleo de OJS:
+La capa de adjuntos de OJS-Fix añade controles sin modificar el núcleo de OJS:
 
 | Punto de control | Qué ocurre |
 | --- | --- |
 | Antes de aceptar la subida | Un `auto_prepend_file` del pool FPM inspecciona todos los archivos de `$_FILES` antes de ejecutar OJS, incluidos formularios y API de archivos temporales. |
 | Antes de entregar una descarga | Un plugin para OJS 3.4 intercepta `File::download` y las descargas privadas de `FileManager::downloadFile`. Crea una copia temporal, la inspecciona y entrega los mismos bytes inspeccionados. |
+| Antes del correo nativo de OJS | El plugin escucha `MessageSending`, inspecciona las partes MIME adjuntas e inline y fija los bytes comprobados antes del transporte SMTP. Un rechazo cancela el envío. |
 | Antivirus local | Un proxy local autentica al cliente por UID real en Unix o por certificado en TLS mutuo, y solo admite un flujo `INSTREAM` acotado hacia el daemon ClamAV existente. No admite rutas, administración, parada del daemon ni ejecución de comandos. |
 | Fallo o espera excesiva | Se rechaza la operación con 503. Una respuesta incompleta del antivirus nunca se interpreta como limpia. |
 | Rechazo de contenido | Se devuelve 422; el archivo no llega a registrarse como una subida aceptada. Los originales históricos se conservan para revisión administrativa. |
@@ -91,12 +92,20 @@ Incluye ambas carpetas de certificados en el respaldo protegido y supervisa su c
 ## Pruebas reproducibles
 
 ```bash
-PHP_BINARY=/ruta/al/php8 python3 -m unittest discover -s tests -v
+PHP_BINARY=/ruta/al/php8 OJS_VENDOR_AUTOLOAD=/ruta/a/ojs/lib/pkp/lib/vendor/autoload.php python3 -m unittest discover -s tests -v
 ```
 
-La suite incluye pruebas del proxy con socket Unix y TLS mutuo, documentos ficticios, errores y respuestas incompletas del scanner, nombres engañosos, macros, relaciones externas, límites ZIP y escapes por symlink. Un servidor PHP local demuestra que un rechazo ocurre antes de ejecutar la aplicación. Las pruebas que requieren PHP se omiten si no está disponible; el registro del caso incluye una ejecución completa con PHP 8.3 y **39 pruebas aprobadas**.
+La suite incluye pruebas del proxy con socket Unix y TLS mutuo, documentos ficticios, errores y respuestas incompletas del scanner, nombres engañosos, macros, relaciones externas, límites ZIP y escapes por symlink. Un servidor PHP local demuestra que un rechazo ocurre antes de ejecutar la aplicación. Las pruebas que requieren PHP se omiten si no está disponible y las tres de MIME necesitan el autoloader de OJS indicado en `OJS_VENDOR_AUTOLOAD`; el registro del caso incluye una ejecución completa con PHP 8.3 y **42 pruebas aprobadas**.
 
 Para validar en OJS, usa una copia con base de datos, archivos, sesiones y temporales separados, correo externo desactivado y acceso solo local. Prueba, como usuario autenticado, subidas PDF/DOCX/DOC por API y el asistente habitual de tu revista. Los rechazos no deben crear filas de archivos temporales. En una copia ficticia de una descarga, sustituye temporalmente solo ese archivo por el patrón estándar inofensivo de prueba y confirma el bloqueo; restaura la copia al terminar. Nunca uses malware real ni alteres documentos de producción para una prueba.
+
+## Adjuntos por correo
+
+El control del evento nativo de correo examina el árbol MIME que va al transporte, incluidas imágenes inline. Reconstruye los adjuntos con los bytes ya analizados, preservando el cuerpo de texto/HTML y los identificadores de imágenes. Así se evita el camino que reenviaba un archivo guardado sin pasar por el controlador de descarga. El límite total de adjuntos usa el máximo configurado por la política. Si se detecta un archivo o el antivirus falla, se interrumpe el envío; revisa el error antes de reintentarlo con un original válido.
+
+El plugin debe estar cargado en el proceso que envía el correo. Comprueba también tus workers CLI o integraciones de cola personalizados; no se declara cobertura de plugins que omiten el sistema nativo y utilizan su propio cliente SMTP. El filtro de correo del proveedor sigue siendo una capa adicional, especialmente para mensajes ajenos a OJS.
+
+Las pruebas MIME construyen mensajes con direcciones ficticias y los serializan localmente: no llaman a un transporte ni envían mensajes. En el despliegue se verificó también el listener real de OJS mediante el evento previo al envío, con un adjunto válido y el patrón estándar inofensivo de antivirus, sin invocar SMTP.
 
 ## Históricos, privacidad y operación
 
