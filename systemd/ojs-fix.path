@@ -1,0 +1,11 @@
+[Unit]
+Description=Recheck OJS protection when CWP changes vhosts
+
+[Path]
+PathChanged=/etc/nginx/conf.d/vhosts
+PathChanged=/usr/local/apache/conf.d/vhosts
+PathChanged=/home/journal/.conf/webservers
+Unit=ojs-fix.service
+
+[Install]
+WantedBy=multi-user.target

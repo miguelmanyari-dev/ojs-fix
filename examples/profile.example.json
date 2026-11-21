@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "release": "3.4.0.12",
+  "uid": 1001,
+  "gid": 1001,
+  "site_dir": "/home/journal/public_html",
+  "account_home": "/home/journal",
+  "private_dir": "/home/journal/ojs-private",
+  "state_dir": "/var/lib/ojs-fix/journal",
+  "domain": "journal.example.org",
+  "origin_ip": "203.0.113.10",
+  "lock_home": true,
+  "runtime_dirs": [
+    "cache",
+    "public"
+  ],
+  "nginx_include": "/etc/nginx/ojs-fix-journal.conf",
+  "apache_include": "/usr/local/apache/conf/ojs-fix-journal.conf",
+  "maintenance_flag": "/etc/nginx/ojs-fix-journal-maintenance.flag",
+  "enforce_document_root": false,
+  "managed_files": {
+    "/etc/nginx/ojs-fix-journal.conf": {
+      "source": "/etc/ojs-fix/approved/nginx-site.conf",
+      "service": "nginx",
+      "mode": 420
+    },
+    "/etc/nginx/conf.d/00-ojs-fix-journal-zones.conf": {
+      "source": "/etc/ojs-fix/approved/nginx-http.conf",
+      "service": "nginx",
+      "mode": 420
+    },
+    "/usr/local/apache/conf/ojs-fix-journal.conf": {
+      "source": "/etc/ojs-fix/approved/apache-site.conf",
+      "service": "httpd",
+      "mode": 420
+    }
+  },
+  "services": {
+    "nginx": {
+      "test": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "reload": [
+        "/usr/bin/systemctl",
+        "reload",
+        "nginx"
+      ]
+    },
+    "httpd": {
+      "test": [
+        "/usr/local/apache/bin/apachectl",
+        "-t"
+      ],
+      "reload": [
+        "/usr/bin/systemctl",
+        "reload",
+        "httpd"
+      ]
+    }
+  },
+  "reload_order": [
+    "httpd",
+    "nginx"
+  ],
+  "nginx_vhosts": [
+    "/etc/nginx/conf.d/vhosts/journal.example.org.conf",
+    "/etc/nginx/conf.d/vhosts/journal.example.org.ssl.conf"
+  ],
+  "apache_vhosts": [
+    "/usr/local/apache/conf.d/vhosts/journal.example.org.conf",
+    "/usr/local/apache/conf.d/vhosts/journal.example.org.ssl.conf"
+  ],
+  "cwp_metadata": null,
+  "cwp_values": {},
+  "old_php_sockets": [],
+  "antivirus": {
+    "command": [
+      "/usr/bin/clamdscan",
+      "--config-file=/etc/clamd.d/amavisd.conf",
+      "--fdpass",
+      "--infected",
+      "--no-summary"
+    ],
+    "batch_size": 25,
+    "timeout_seconds": 10,
+    "budget_seconds": 25
+  },
+  "health_checks": [
+    {
+      "path": "/index.php/journal",
+      "status": "200"
+    },
+    {
+      "path": "/index.php/journal/login",
+      "status": "200"
+    },
+    {
+      "path": "/index.php/journal/sitemap",
+      "status": "200"
+    },
+    {
+      "path": "/files/ojs-fix-access-check",
+      "status": "403"
+    },
+    {
+      "path": "/ojs-fix-block-check.php",
+      "status": "403"
+    }
+  ]
+}

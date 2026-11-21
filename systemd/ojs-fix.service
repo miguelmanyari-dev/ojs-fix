@@ -1,0 +1,29 @@
+[Unit]
+Description=Verify one OJS account and its approved web configuration
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/python3 /usr/local/sbin/ojs-fix --profile /etc/ojs-fix/profile.json
+TimeoutStartSec=90
+Nice=15
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+ProtectHome=read-only
+# EXAMPLE paths: adapt to the actual account and managed files before installing.
+ReadWritePaths=/etc/nginx /home/journal /var/lib/ojs-fix
+ReadWritePaths=/usr/local/apache/conf /usr/local/apache/conf.d/vhosts
+ReadWritePaths=/usr/local/apache/logs /usr/local/apache/domlogs
+ReadWritePaths=/usr/local/cwpsrv/htdocs/resources/conf/web_servers/vhosts
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
